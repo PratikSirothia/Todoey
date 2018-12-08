@@ -11,23 +11,12 @@ import UIKit
 class TodoListViewController: UITableViewController {
     
     var itemArray = [Item]()
-    
-    let userDefaults = UserDefaults.standard
+    let dataFilepath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist")
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        let ittem1 = Item()
-        ittem1.title = "One"
-        itemArray.append(ittem1)
-        
-        let ittem2 = Item()
-        ittem2.title = "Two"
-        itemArray.append(ittem2)
+        loadItems()
         // Do any additional setup after loading the view, typically from a nib.
-        if let items = userDefaults.array(forKey: "ToDoListArray") as? [Item] {
-            itemArray = items
-        }
     }
 
     // MARK - TableView DataSource Methods
@@ -54,13 +43,36 @@ class TodoListViewController: UITableViewController {
         print(itemArray[indexPath.row])
         
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
-        
+        saveItem()
         tableView.reloadData()
-        
         tableView.deselectRow(at: indexPath, animated: true)
     }
     
     // MARK - addAction
+    fileprivate func saveItem() {
+        let encoder = PropertyListEncoder()
+        
+        do{
+            let data = try encoder.encode( itemArray)
+            try data.write(to: dataFilepath!)
+        }catch{
+            print("Something went wrong\(error)")
+        }
+    }
+    
+    fileprivate func loadItems() {
+        if let data = try? Data(contentsOf: dataFilepath!){
+            let decoder = PropertyListDecoder()
+            do{
+                itemArray = try decoder.decode([Item].self, from: data)
+            }catch{
+                print("Oops somthing went wrong while decodin\(error)")
+            }
+            
+        }
+        
+    }
+    
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         var textField = UITextField()
         let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
@@ -68,7 +80,9 @@ class TodoListViewController: UITableViewController {
             let item = Item()
             item.title = textField.text!
             self.itemArray.append(item)
-            self.userDefaults.set(self.itemArray, forKey: "ToDoListArray")
+            
+            self.saveItem()
+            
             self.tableView.reloadData()
         }
         
